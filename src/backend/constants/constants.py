@@ -1,0 +1,1 @@
+ETORO_BASE_URL = "https://public-api.etoro.com/api/v1"

@@ -65,6 +65,12 @@ db.sqlite3-journal
 instance/
 .webassets-cache
 
+#vscode
+.vscode/
+
+#pycache
+__pycache__/
+
 # Scrapy stuff:
 .scrapy
 
@@ -216,3 +222,5 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+*.db
