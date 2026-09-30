@@ -8,3 +8,5 @@ main_api = Blueprint("main_api", __name__)
 def health_check():
     """Return the minimum liveness response for the application."""
     return {"status": "ok"}, 200
+
+

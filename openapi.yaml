@@ -1,0 +1,365 @@
+openapi: 3.0.3
+
+info:
+  title: SelfDashboard Backend API
+  description: |
+    API Flask para consultar el estado del backend SelfDashboard.
+
+    La integración actual expone el resumen de cuenta de eToro y operaciones
+    CRUD parciales sobre depósitos. Las operaciones de depósitos devuelven la
+    tabla completa después de cada consulta, edición o eliminación.
+  version: 0.1.0
+
+servers:
+  - url: http://127.0.0.1:5001
+    description: Desarrollo local
+
+tags:
+  - name: Health
+    description: Comprobaciones de disponibilidad
+  - name: eToro
+    description: Integración con eToro
+  - name: Deposits
+    description: Gestión de depósitos de eToro
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Comprobar disponibilidad
+      operationId: healthCheck
+      responses:
+        "200":
+          description: El servicio está disponible.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+              example:
+                status: ok
+
+  /api/etoro/etoro/summary:
+    get:
+      tags:
+        - eToro
+      summary: Obtener el resumen de cuenta de eToro
+      operationId: getEtoroAccountSummary
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+        - $ref: "#/components/parameters/UserPin"
+        - $ref: "#/components/parameters/ApiKey"
+      responses:
+        "200":
+          description: Resumen de cuenta obtenido correctamente.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountSummaryResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/etoro/etoro/deposits:
+    get:
+      tags:
+        - Deposits
+      summary: Obtener todos los depósitos
+      description: Devuelve la tabla completa de depósitos en formato JSON.
+      operationId: getEtoroDeposits
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+        - $ref: "#/components/parameters/UserPin"
+        - $ref: "#/components/parameters/ApiKey"
+      responses:
+        "200":
+          description: Lista completa de depósitos.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DepositsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/etoro/etoro/deposits/edit:
+    put:
+      tags:
+        - Deposits
+      summary: Crear o actualizar depósitos
+      description: |
+        Recibe una lista de diccionarios. Los elementos con `id` actualizan
+        registros existentes; los elementos sin `id` se insertan como nuevos.
+        `created_at` es opcional y no se utiliza para la actualización.
+        La respuesta contiene la tabla completa después de aplicar los cambios.
+      operationId: editEtoroDeposits
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+        - $ref: "#/components/parameters/UserPin"
+        - $ref: "#/components/parameters/ApiKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EditDepositsRequest"
+            example:
+              deposits:
+                - amount: 200.0
+                  currency: USD
+                  deposited_at: "2026-09-30"
+                - id: 3
+                  amount: 250.0
+                  currency: USD
+                  deposited_at: "2026-09-29"
+      responses:
+        "200":
+          description: Cambios aplicados y tabla completa devuelta.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DepositsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/etoro/etoro/deposits/delete:
+    post:
+      tags:
+        - Deposits
+      summary: Eliminar depósitos
+      description: |
+        Elimina los depósitos cuyos identificadores se reciben en
+        `deposit_ids` y devuelve la tabla completa restante.
+      operationId: deleteEtoroDeposits
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+        - $ref: "#/components/parameters/UserPin"
+        - $ref: "#/components/parameters/ApiKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeleteDepositsRequest"
+            example:
+              deposit_ids: [3, 8]
+      responses:
+        "200":
+          description: Depósitos eliminados y tabla completa devuelta.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DepositsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+components:
+  parameters:
+    UserId:
+      name: user_ID
+      in: header
+      required: true
+      description: Identificador del usuario utilizado por la autorización actual.
+      schema:
+        type: string
+    UserPin:
+      name: user_PIN
+      in: header
+      required: true
+      description: PIN del usuario utilizado por la autorización actual.
+      schema:
+        type: string
+        format: password
+    ApiKey:
+      name: X-APIKEY
+      in: header
+      required: true
+      description: Clave API del cliente.
+      schema:
+        type: string
+        format: password
+
+  responses:
+    Unauthorized:
+      description: Las credenciales de autorización no son válidas.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            message: Invalid authorization
+    NotFound:
+      description: No se encontraron depósitos después de la operación.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            message: No deposits found
+    InternalServerError:
+      description: Error al consultar eToro o la persistencia local.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - ok
+
+    AccountSummaryResponse:
+      type: object
+      required:
+        - account_summary
+      properties:
+        account_summary:
+          $ref: "#/components/schemas/EtoroAccountSummary"
+
+    EtoroAccountSummary:
+      type: object
+      required:
+        - currency
+        - total_balance
+        - total_cash
+        - reserved_cash
+        - available_cash
+        - deposits
+        - last_close_date
+        - last_close_balance
+        - change_since_last_close
+        - change_since_last_close_pct
+      properties:
+        currency:
+          type: string
+          example: USD
+        total_balance:
+          type: number
+          format: double
+        total_cash:
+          type: number
+          format: double
+        reserved_cash:
+          type: number
+          format: double
+        available_cash:
+          type: number
+          format: double
+        deposits:
+          type: number
+          format: double
+        last_close_date:
+          type: string
+          example: "2026-09-28"
+        last_close_balance:
+          type: number
+          format: double
+        change_since_last_close:
+          type: number
+          format: double
+        change_since_last_close_pct:
+          type: number
+          format: double
+          nullable: true
+
+    Deposit:
+      type: object
+      required:
+        - id
+        - amount
+        - currency
+        - deposited_at
+        - created_at
+      properties:
+        id:
+          type: integer
+          description: Identificador asignado por la base de datos.
+          example: 3
+        amount:
+          type: number
+          format: double
+          example: 200.0
+        currency:
+          type: string
+          default: USD
+          example: USD
+        deposited_at:
+          type: string
+          description: Fecha del depósito.
+          example: "2026-09-30"
+        created_at:
+          type: string
+          nullable: true
+          description: Fecha de creación asignada por la base de datos.
+
+    EditableDeposit:
+      type: object
+      required:
+        - amount
+        - deposited_at
+      properties:
+        id:
+          type: integer
+          description: Si se incluye, actualiza ese registro; si se omite, crea uno nuevo.
+        amount:
+          type: number
+          format: double
+        currency:
+          type: string
+          default: USD
+        deposited_at:
+          type: string
+        created_at:
+          type: string
+          nullable: true
+          description: Campo opcional aceptado por el modelo; no se modifica en la base de datos.
+
+    DepositsResponse:
+      type: object
+      required:
+        - deposits
+      properties:
+        deposits:
+          type: array
+          description: Tabla completa de depósitos tras la operación.
+          items:
+            $ref: "#/components/schemas/Deposit"
+
+    EditDepositsRequest:
+      type: object
+      required:
+        - deposits
+      properties:
+        deposits:
+          type: array
+          items:
+            $ref: "#/components/schemas/EditableDeposit"
+
+    DeleteDepositsRequest:
+      type: object
+      required:
+        - deposit_ids
+      properties:
+        deposit_ids:
+          type: array
+          items:
+            type: integer
+          example: [3, 8]
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string

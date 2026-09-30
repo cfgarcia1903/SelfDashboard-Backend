@@ -37,6 +37,32 @@ class EtoroDAO:
                 VALUES (?, ?, ?)
             """, deposits.as_for_insert())
 
+    
+    @classmethod
+    def update_deposits(cls, deposits: EtoroDeposits):
+        current_deposits = cls.query_deposits()
+
+        for deposit in deposits.deposits:
+            if deposit.id is None:
+                # Insert new deposit
+                cls.insert_deposits(EtoroDeposits(deposits=[deposit]))
+            if deposit.id is not None:
+                # Update existing deposit
+                with sqlite3.connect(cls.ETORO_DB_PATH) as connection:
+                    connection.execute("""
+                        UPDATE h_deposits
+                        SET amount = ?, currency = ?, deposited_at = ?
+                        WHERE id = ?
+                    """, (deposit.amount, deposit.currency, deposit.deposited_at, deposit.id))
+
+    @classmethod
+    def delete_deposits(cls, deposit_ids: list):
+        with sqlite3.connect(cls.ETORO_DB_PATH) as connection:
+            connection.executemany("""
+                DELETE FROM h_deposits WHERE id = ?
+            """, [(deposit_id,) for deposit_id in deposit_ids])
+        
+
     @classmethod
     def get_total_deposits(cls) -> float:
         deposits = cls.query_deposits()

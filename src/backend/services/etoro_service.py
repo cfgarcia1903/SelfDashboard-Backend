@@ -1,5 +1,8 @@
+from typing import Dict, List
+
 from backend.client.etoro_client import EtoroClient
 from backend.schemas.request_schemas import EtoroAccountSummary
+from backend.schemas.data_schemas import EtoroDeposit, EtoroDeposits
 from backend.dao.etoro_dao import EtoroDAO
 
 
@@ -49,3 +52,32 @@ class EtoroService:
             change_since_last_close=change,
             change_since_last_close_pct=change_pct,
         )
+
+    @classmethod
+    def get_deposits(cls) -> List[Dict] | None:
+        deposits = EtoroDAO.query_deposits()
+        if not deposits:
+            return None
+        else:
+            return deposits.as_dict()
+
+    @classmethod
+    def update_deposits(cls, deposits: List[Dict]) -> List[Dict] | None:
+        deposits_to_update = EtoroDeposits(
+            deposits=[EtoroDeposit(**deposit) for deposit in deposits]
+        )
+        EtoroDAO.update_deposits(deposits_to_update)
+        updated_deposits = EtoroDAO.query_deposits()
+        if not updated_deposits:
+            return None
+        else:
+            return updated_deposits.as_dict()
+
+    @classmethod
+    def delete_deposits(cls, deposit_ids: List[int]) -> None:
+        EtoroDAO.delete_deposits(deposit_ids)
+        updated_deposits = EtoroDAO.query_deposits()
+        if not updated_deposits:
+            return None
+        else:
+            return updated_deposits.as_dict()
