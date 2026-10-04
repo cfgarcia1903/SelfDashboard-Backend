@@ -2,9 +2,10 @@ from backend.constants.constants import ETORO_BASE_URL
 
 import uuid
 import requests
-
+from datetime import datetime, timedelta
 
 class EtoroClient:
+    REQUEST_TIMEOUT_SECONDS = 30
     ETORO_REAL_PNL_URL = f"{ETORO_BASE_URL}/trading/info/real/pnl"
     ETORO_BALANCES_URL = f"{ETORO_BASE_URL}/balances"
     ETORO_BALANCES_HISTORY_URL = f"{ETORO_BASE_URL}/balances/history"
@@ -20,7 +21,7 @@ class EtoroClient:
         response = requests.get(
             cls.ETORO_REAL_PNL_URL,
             headers=headers,
-            timeout=10,
+            timeout=cls.REQUEST_TIMEOUT_SECONDS,
         )
 
         response.raise_for_status()
@@ -65,7 +66,7 @@ class EtoroClient:
             params={
                 "displayCurrency": "USD",
             },
-            timeout=10,
+            timeout=cls.REQUEST_TIMEOUT_SECONDS,
         )
 
         balance_response.raise_for_status()
@@ -74,7 +75,13 @@ class EtoroClient:
         return balance
     
     @classmethod
-    def get_balance_snapshots(cls, public_key: str, user_key: str) -> list:
+    def get_balance_snapshots(cls, public_key: str, user_key: str, nr_last_days: int = 30) -> list:
+
+        #get date minus nr_last_days in YYYY-MM-DD format   
+
+        nr_last_days = min(nr_last_days, 365)  # Ensure at least 1 day
+
+        start_date = (datetime.now() - timedelta(days=nr_last_days)).strftime("%Y-%m-%d")
 
         headers = {
             "x-api-key": public_key,
@@ -90,8 +97,9 @@ class EtoroClient:
             headers=headers,
             params={
                 "displayCurrency": "USD",
+                "fromDate": start_date
             },
-            timeout=10,
+            timeout=cls.REQUEST_TIMEOUT_SECONDS,
         )
 
         history_response.raise_for_status()

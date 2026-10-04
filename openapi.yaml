@@ -39,7 +39,7 @@ paths:
               example:
                 status: ok
 
-  /api/etoro/etoro/summary:
+  /api/etoro/summary:
     get:
       tags:
         - eToro
@@ -61,7 +61,32 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerError"
 
-  /api/etoro/etoro/deposits:
+  /api/etoro/snapshots:
+    get:
+      tags:
+        - eToro
+      summary: Obtener el valor de la cuenta de eToro en varios puntos en el tiempo
+      operationId: getEtoroAccountSnapshots
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+        - $ref: "#/components/parameters/UserPin"
+        - $ref: "#/components/parameters/ApiKey"
+        - $ref: "#/components/parameters/SnapshotPeriod"
+      responses:
+        "200":
+          description: snapshots de cuenta obtenidos correctamente.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SnapshotsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/etoro/deposits:
     get:
       tags:
         - Deposits
@@ -84,7 +109,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /api/etoro/etoro/deposits/edit:
+  /api/etoro/deposits/edit:
     put:
       tags:
         - Deposits
@@ -126,7 +151,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /api/etoro/etoro/deposits/delete:
+  /api/etoro/deposits/delete:
     post:
       tags:
         - Deposits
@@ -184,6 +209,21 @@ components:
       schema:
         type: string
         format: password
+    SnapshotPeriod:
+      name: period
+      in: query
+      required: false
+      description: Periodo de histórico que se desea consultar.
+      schema:
+        type: string
+        default: 1M
+        enum:
+          - 1D
+          - 1W
+          - 1M
+          - 3M
+          - 6M
+          - 1Y
 
   responses:
     Unauthorized:
@@ -228,6 +268,34 @@ components:
         account_summary:
           $ref: "#/components/schemas/EtoroAccountSummary"
 
+    SnapshotsResponse:
+      type: object
+      required:
+        - snapshots
+      properties:
+        snapshots:
+          type: array
+          items:
+            $ref: "#/components/schemas/EtoroAccountSnapshot"
+
+    EtoroAccountSnapshot:
+      type: object
+      required:
+        - date
+        - value_usd
+        - value_pen
+      properties:
+        date:
+          type: string
+          format: date
+          example: "2026-09-28"
+        value_usd:
+          type: number
+          format: double
+        value_pen:
+          type: number
+          format: double
+
     EtoroAccountSummary:
       type: object
       required:
@@ -262,6 +330,7 @@ components:
           format: double
         last_close_date:
           type: string
+          format: date
           example: "2026-09-28"
         last_close_balance:
           type: number
@@ -297,10 +366,12 @@ components:
           example: USD
         deposited_at:
           type: string
+          format: date
           description: Fecha del depósito.
           example: "2026-09-30"
         created_at:
           type: string
+          format: date-time
           nullable: true
           description: Fecha de creación asignada por la base de datos.
 
@@ -321,8 +392,10 @@ components:
           default: USD
         deposited_at:
           type: string
+          format: date
         created_at:
           type: string
+          format: date-time
           nullable: true
           description: Campo opcional aceptado por el modelo; no se modifica en la base de datos.
 

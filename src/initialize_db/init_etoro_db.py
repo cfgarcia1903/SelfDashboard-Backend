@@ -21,6 +21,7 @@ def get_connection() -> sqlite3.Connection:
 
 def init_db() -> None:
     with get_connection() as connection:
+        ## TABLA H_DEPOSITS
         connection.execute("""
             CREATE TABLE IF NOT EXISTS h_deposits (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -30,7 +31,30 @@ def init_db() -> None:
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        connection.commit()
 
+        ## TABLA H_ACCUMULATED_DEPOSITS
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS h_accumulated_deposits (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                value_usd REAL NOT NULL,
+                value_pen REAL NOT NULL,
+                snapshot_date TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        connection.commit()
+        
+        ## TABLA H_SNAPSHOTS
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS h_snapshots (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                value_usd REAL NOT NULL,
+                value_pen REAL NOT NULL,
+                snapshot_date TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
         connection.commit()
 
 

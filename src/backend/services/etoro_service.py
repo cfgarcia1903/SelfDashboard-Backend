@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Dict, List
 
 from backend.client.etoro_client import EtoroClient
@@ -81,3 +82,35 @@ class EtoroService:
             return None
         else:
             return updated_deposits.as_dict()
+
+    @classmethod
+    def get_snapshots(cls, public_key: str, user_key: str, period: str = "1M") -> list[dict]:
+
+
+        snapshots = EtoroDAO.get_latest_snapshots(period=period)
+
+        # If there are no snapshots or last snapshot is not from today, we need to update
+        if not snapshots:
+            EtoroDAO.update_snapshots(public_key, user_key)
+            snapshots = EtoroDAO.get_latest_snapshots(period=period)
+        elif snapshots[0][4] != datetime.now().strftime("%Y-%m-%d"):
+            EtoroDAO.update_snapshots(public_key, user_key)
+            snapshots = EtoroDAO.get_latest_snapshots(period=period)
+
+        if not snapshots:
+            raise RuntimeError(
+                "No historical balance snapshots were returned"
+            )
+
+        snapshots_json = []
+        for snapshot in snapshots:
+            snapshot_date = snapshot[4]
+            snapshot_value_usd = snapshot[1]
+            snapshot_value_pen = snapshot[2]
+            snapshots_json.append({
+                "date": snapshot_date,
+                "value_usd": snapshot_value_usd,
+                "value_pen": snapshot_value_pen})
+
+        return snapshots_json
+     

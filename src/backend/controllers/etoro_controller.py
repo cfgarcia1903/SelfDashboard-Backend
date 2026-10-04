@@ -87,8 +87,27 @@ class EtoroDepositsDeleteView(MethodView):
         if not authorization.validate():
             return {"message": "Invalid authorization"}, 401
 
+class EtoroSnapshotsView(MethodView):
+    def get(self):
+        try:
+            authorization = Authorization(request.headers.get("user_ID"), 
+                                        request.headers.get("user_PIN"), 
+                                        request.headers.get("X-APIKEY"))
+        except Exception as e:
+            return {"message": "Invalid authorization"}, 401
 
-etoro_api.add_url_rule("/etoro/summary", view_func=EtoroSummaryView.as_view("etoro_summary"))
-etoro_api.add_url_rule("/etoro/deposits", view_func=EtoroDepositsRetrieveView.as_view("etoro_deposits_retrieve"))
-etoro_api.add_url_rule("/etoro/deposits/edit", view_func=EtoroDepositsEditView.as_view("etoro_deposits_edit"))
-etoro_api.add_url_rule("/etoro/deposits/delete", view_func=EtoroDepositsDeleteView.as_view("etoro_deposits_delete"))
+        if authorization.validate():
+            credentials = get_etoro_credentials(authorization.__dict__)
+            period = request.args.get("period", "1M")
+            snapshots = EtoroService.get_snapshots(credentials["public"], credentials["private"], period)
+            return {"snapshots": snapshots}, 200
+        
+        if not authorization.validate():
+            return {"message": "Invalid authorization"}, 401
+
+
+etoro_api.add_url_rule("/summary", view_func=EtoroSummaryView.as_view("etoro_summary"))
+etoro_api.add_url_rule("/deposits", view_func=EtoroDepositsRetrieveView.as_view("etoro_deposits_retrieve"))
+etoro_api.add_url_rule("/deposits/edit", view_func=EtoroDepositsEditView.as_view("etoro_deposits_edit"))
+etoro_api.add_url_rule("/deposits/delete", view_func=EtoroDepositsDeleteView.as_view("etoro_deposits_delete"))
+etoro_api.add_url_rule("/snapshots", view_func=EtoroSnapshotsView.as_view("etoro_snapshots"))
